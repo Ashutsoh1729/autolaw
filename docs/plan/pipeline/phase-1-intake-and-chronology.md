@@ -120,8 +120,9 @@ Raw docs (PDF, TXT, email, scan)
 ## Implementation Steps
 
 ### Step 1: Project Scaffolding
-- [ ] Initialize the project repository structure (backend, frontend, shared types).
-- [ ] Set up language & framework (e.g., Python/FastAPI backend, React/TypeScript frontend).
+- [x] Backend initialized — Python/FastAPI project already set up. No action needed.
+- [x] Frontend stack decided: **Vite + React Router + TypeScript + shadcn/ui**.
+- [ ] Scaffold frontend project with Vite + React + TypeScript template.
 - [ ] Configure linting, formatting, and CI checks.
 - [ ] Create Docker Compose file for local dev (app, DB, OCR service, vector store placeholder).
 
@@ -176,7 +177,7 @@ Raw docs (PDF, TXT, email, scan)
 - [ ] Write tests for deduplication edge cases (same event from different sources, slightly different wording).
 
 ### Step 8: Interactive Timeline UI
-- [ ] Set up React/TypeScript frontend with routing (matter detail → timeline, matter list → detail).
+- [ ] Set up Vite + React Router frontend with routing (matter detail → timeline, matter list → detail).
 - [ ] Build the Timeline View page (`/matters/:id/timeline`): horizontal scrollable timeline with event cards.
 - [ ] Add timeline filters: date range picker, person search, document type dropdown.
 - [ ] Add full-text search across event descriptions.
@@ -208,7 +209,7 @@ Raw docs (PDF, TXT, email, scan)
 - `backend/app/models/` — SQLAlchemy/Pydantic models
 - `backend/app/routers/` — API route handlers
 - `backend/app/services/` — business logic (OCR, extraction, deduplication)
-- `frontend/` — new React/TypeScript project directory
+- `frontend/` — new Vite + React + TypeScript project directory
 - `frontend/src/pages/Dashboard.tsx` — matter list / home page
 - `frontend/src/pages/CreateMatter.tsx` — new matter form + document upload
 - `frontend/src/pages/MatterDetail.tsx` — document list with status, upload more
