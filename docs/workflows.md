@@ -104,7 +104,7 @@ Create, view, update, archive, and delete legal matters.
 flowchart LR
     subgraph User["👤 User Actions"]
         A1["Click '+ New Matter'"]
-        A2["Fill form + optionally<br/>upload files"]
+        A2["Fill form with<br/>case details"]
         A3["Click 'Create'"]
         A4["View matter detail"]
         A5["Edit / Archive matter"]
@@ -766,7 +766,7 @@ graph TB
 |---|---|---|
 | `/` | Redirect → `/dashboard` | Root redirect |
 | `/dashboard` | `Dashboard.tsx` | Matter cards, search, filter, "New Matter" CTA |
-| `/matters/new` | `CreateMatter.tsx` | Case metadata form + drag-and-drop upload |
+| `/matters/new` | `CreateMatter.tsx` | Case metadata form |
 | `/matters/:id` | `MatterDetail.tsx` | Document list, status badges, upload more, process, email setup |
 | `/matters/:id/timeline` | `TimelineView.tsx` | Interactive timeline with filters and export |
 

@@ -13,9 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DropZone, type FileEntry } from "@/components/DropZone"
-import { UploadProgressBar } from "@/components/ProgressBar"
-import { useUpload } from "@/hooks/useUpload"
 import { createMatter } from "@/hooks/useMatter"
 
 const CASE_TYPES = [
@@ -46,7 +43,6 @@ interface FormErrors {
 
 export function CreateMatter() {
   const navigate = useNavigate()
-  const { uploads, uploadFiles } = useUpload()
 
   const [formData, setFormData] = useState<FormData>({
     title: "",
@@ -56,7 +52,6 @@ export function CreateMatter() {
     description: "",
   })
   const [errors, setErrors] = useState<FormErrors>({})
-  const [files, setFiles] = useState<FileEntry[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -70,17 +65,6 @@ export function CreateMatter() {
     },
     [errors]
   )
-
-  const handleFilesSelected = useCallback(
-    (newFiles: FileEntry[]) => {
-      setFiles((prev) => [...prev, ...newFiles])
-    },
-    []
-  )
-
-  const handleRemoveFile = useCallback((id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id))
-  }, [])
 
   const validate = useCallback((): boolean => {
     const newErrors: FormErrors = {}
@@ -100,7 +84,6 @@ export function CreateMatter() {
       setSubmitError(null)
 
       try {
-        // Create the matter
         const matter = await createMatter({
           title: formData.title.trim(),
           case_number: formData.case_number.trim() || undefined,
@@ -108,11 +91,6 @@ export function CreateMatter() {
           jurisdiction: formData.jurisdiction.trim() || undefined,
           description: formData.description.trim() || undefined,
         })
-
-        // Upload files if any
-        if (files.length > 0) {
-          await uploadFiles(matter.id, files.map((f) => f.file))
-        }
 
         // Navigate to the new matter's detail page
         navigate(`/matters/${matter.id}`)
@@ -124,7 +102,7 @@ export function CreateMatter() {
         setSubmitting(false)
       }
     },
-    [formData, files, navigate, validate, uploadFiles]
+    [formData, navigate, validate]
   )
 
   return (
@@ -142,7 +120,8 @@ export function CreateMatter() {
         <CardHeader>
           <CardTitle className="text-2xl">Create New Matter</CardTitle>
           <CardDescription>
-            Enter case details and upload related documents to get started.
+            Enter case details to create a new matter. Documents can be added
+            later from the matter detail page.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -223,36 +202,6 @@ export function CreateMatter() {
                 }
               />
             </div>
-
-            {/* File Upload */}
-            <div className="space-y-2">
-              <Label>Documents</Label>
-              <DropZone
-                onFilesSelected={handleFilesSelected}
-                files={files}
-                onRemoveFile={handleRemoveFile}
-              />
-            </div>
-
-            {/* Upload progress */}
-            {uploads.length > 0 && (
-              <div className="space-y-2">
-                <Label>Upload Progress</Label>
-                {uploads.map((u) => (
-                  <div
-                    key={u.fileName}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <span className="truncate max-w-[200px]">{u.fileName}</span>
-                    <UploadProgressBar
-                      progress={u.progress}
-                      status={u.status}
-                      error={u.error}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
 
             {/* Submit error */}
             {submitError && (
