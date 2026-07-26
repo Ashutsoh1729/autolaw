@@ -21,11 +21,14 @@ class Settings(BaseSettings):
     # OCR
     tesseract_cmd: str = "/opt/homebrew/bin/tesseract"
 
-    # LLM (optional — used in Steps 5-6)
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
-    anthropic_api_key: str = ""
-    anthropic_model: str = "claude-3-5-haiku-latest"
+    # LLM via OpenRouter (optional — used in Steps 5-6)
+    # Set AUTOLAW_OPENROUTER_API_KEY to enable LLM extraction.
+    # Change AUTOLAW_LLM_MODEL to any OpenRouter model slug, e.g.:
+    #   "openai/gpt-4o-mini", "anthropic/claude-3-5-haiku",
+    #   "deepseek/deepseek-chat", "google/gemini-2.0-flash-001"
+    openrouter_api_key: str = ""
+    llm_model: str = "openai/gpt-4o-mini"
+    llm_base_url: str = "https://openrouter.ai/api/v1"
 
     # Email ingestion (placeholder for Phase 2)
     email_domain: str = "matter.autolaw.app"

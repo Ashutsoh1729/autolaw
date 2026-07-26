@@ -1,80 +1,41 @@
 """LLM event extraction service — extracts structured events from document chunks."""
 
-import json
 import logging
 import re
 from typing import Any
 
 from app.config import settings
+from app.services.extraction_models import EventExtractionResult
 
 logger = logging.getLogger(__name__)
 
-# Extraction prompt template
-EXTRACTION_PROMPT = """You are a legal document analyst. Extract all chronological events from the following document text.
+# Extraction system prompt
+EXTRACTION_SYSTEM_PROMPT = """You are a legal document analyst. Extract all chronological events from the following document text.
 
-For each event, output a JSON object with these fields:
-- "date": The date of the event (ISO 8601 format if possible, otherwise as written)
-- "date_precision": "exact" if a full date is given, "month" if only month/year, "year" if only year, "range" if it's a date range
-- "date_end": If the event spans a date range, the end date (ISO 8601). Otherwise null.
-- "title": A short title for the event (max 100 chars)
-- "description": A detailed description of what happened (2-3 sentences)
-- "people": Array of full names of people involved (as strings)
-- "doc_reference": Any page, paragraph, or section reference from the document
-- "confidence": A number between 0.0 and 1.0 indicating how confident you are that this event occurred as described
+For each event, extract:
+- date: The date of the event (ISO 8601 format if possible, otherwise as written)
+- date_precision: "exact" if a full date is given, "month" if only month/year, "year" if only year, "range" if it's a date range
+- date_end: If the event spans a date range, the end date (ISO 8601). Otherwise null.
+- title: A short title for the event (max 100 chars)
+- description: A detailed description of what happened (2-3 sentences)
+- people: Array of full names of people involved
+- doc_reference: Any page, paragraph, or section reference from the document
+- confidence: A number between 0.0 and 1.0 indicating how confident you are that this event occurred as described
 
-IMPORTANT: 
-- Return ONLY a JSON array of event objects. No other text.
-- If no events are found, return an empty array [].
-- Handle partial dates, relative dates ("on or about March 2024"), and date ranges.
-- Extract ALL events mentioned, even minor ones.
-
-Document text:
----
-{text}
----
-"""
+Handle partial dates, relative dates ("on or about March 2024"), and date ranges.
+Extract ALL events mentioned, even minor ones. If no events are found, return an empty list."""
 
 
-def _parse_json_response(response_text: str) -> list[dict[str, Any]]:
-    """Parse JSON from an LLM response, handling common formatting issues."""
-    # Try direct parse first
-    text = response_text.strip()
-    try:
-        data = json.loads(text)
-        if isinstance(data, list):
-            return data
-        return []
-    except json.JSONDecodeError:
-        pass
+# Flag: whether pydantic-ai is available
+_HAS_PYDANTIC_AI = False
+try:
+    from pydantic_ai import Agent, ModelSettings
+    from pydantic_ai.models.openai import OpenAIChatModel
+    from pydantic_ai.providers.openai import OpenAIProvider
 
-    # Try to extract JSON array from code fences
-    json_match = re.search(r"```(?:json)?\s*\n?(\[[\s\S]*?\])\n?\s*```", text)
-    if json_match:
-        try:
-            return json.loads(json_match.group(1))
-        except json.JSONDecodeError:
-            pass
-
-    # Try to find array starting/ending brackets
-    start = text.find("[")
-    end = text.rfind("]")
-    if start != -1 and end != -1 and end > start:
-        try:
-            return json.loads(text[start : end + 1])
-        except json.JSONDecodeError:
-            pass
-
-    # Try line-by-line JSON parsing (for NDJSON-like output)
-    events = []
-    for line in text.split("\n"):
-        line = line.strip()
-        if line.startswith("{") and line.endswith("}"):
-            try:
-                events.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
-
-    return events
+    _HAS_PYDANTIC_AI = True
+except ImportError:
+    logger.warning("pydantic-ai not installed; LLM extraction will fall back to pattern-based.")
 
 
 async def extract_events_from_chunk(
@@ -83,57 +44,56 @@ async def extract_events_from_chunk(
 ) -> list[dict[str, Any]]:
     """Extract events from a single text chunk using LLM.
 
-    Falls back to a simple pattern-based extraction if no LLM is configured.
+    Uses pydantic-ai with an OpenAI-compatible provider (default: OpenRouter)
+    for structured event extraction. Falls back to a simple pattern-based
+    extraction if no LLM is configured or the call fails.
     """
-    if settings.openai_api_key:
-        return await _extract_with_openai(text)
-    elif settings.anthropic_api_key:
-        return await _extract_with_anthropic(text)
-    else:
+    if not settings.openrouter_api_key or not _HAS_PYDANTIC_AI:
+        return _extract_pattern_based(text, chunk_index)
+
+    try:
+        return await _extract_with_pydantic_ai(text)
+    except Exception as e:
+        logger.error("LLM extraction failed: %s. Falling back to pattern-based.", e)
         return _extract_pattern_based(text, chunk_index)
 
 
-async def _extract_with_openai(text: str) -> list[dict[str, Any]]:
-    """Extract events using OpenAI."""
-    try:
-        from openai import AsyncOpenAI
+async def _extract_with_pydantic_ai(text: str) -> list[dict[str, Any]]:
+    """Extract events using pydantic-ai with an OpenAI-compatible provider."""
+    # Truncate to avoid exceeding token limits
+    truncated_text = text[:8000]
 
-        client = AsyncOpenAI(api_key=settings.openai_api_key)
-        response = await client.chat.completions.create(
-            model=settings.openai_model,
-            messages=[
-                {"role": "system", "content": "You are a legal document analyst. Extract events as JSON."},
-                {"role": "user", "content": EXTRACTION_PROMPT.format(text=text[:8000])},
-            ],
-            temperature=0.1,
-            response_format={"type": "json_object"},
-        )
-        content = response.choices[0].message.content or "[]"
-        return _parse_json_response(content)
-    except Exception as e:
-        logger.error("OpenAI extraction failed: %s. Falling back to pattern-based.", e)
-        return _extract_pattern_based(text, 0)
+    # Build the provider — defaults to OpenRouter but allows any
+    # OpenAI-compatible API via AUTOLAW_LLM_BASE_URL.
+    provider = OpenAIProvider(
+        base_url=settings.llm_base_url,
+        api_key=settings.openrouter_api_key,
+    )
 
+    # Strip any provider prefix from the model name — OpenRouter uses
+    # "openai/gpt-4o-mini" but pydantic-ai expects just "gpt-4o-mini"
+    # when using a custom OpenAI-compatible provider.
+    model_name = settings.llm_model
+    if "/" in model_name:
+        model_name = model_name.split("/", 1)[1]
 
-async def _extract_with_anthropic(text: str) -> list[dict[str, Any]]:
-    """Extract events using Anthropic Claude."""
-    try:
-        from anthropic import AsyncAnthropic
+    model = OpenAIChatModel(
+        model_name,
+        provider=provider,
+        settings=ModelSettings(temperature=0.1),
+    )
 
-        client = AsyncAnthropic(api_key=settings.anthropic_api_key)
-        response = await client.messages.create(
-            model=settings.anthropic_model,
-            max_tokens=4000,
-            system="You are a legal document analyst. Extract events as JSON arrays.",
-            messages=[
-                {"role": "user", "content": EXTRACTION_PROMPT.format(text=text[:8000])},
-            ],
-        )
-        content = response.content[0].text if response.content else "[]"
-        return _parse_json_response(content)
-    except Exception as e:
-        logger.error("Anthropic extraction failed: %s. Falling back to pattern-based.", e)
-        return _extract_pattern_based(text, 0)
+    agent = Agent(
+        model,
+        system_prompt=EXTRACTION_SYSTEM_PROMPT,
+        output_type=EventExtractionResult,
+    )
+
+    result = await agent.run(truncated_text)
+    events = result.output.events  # type: ignore[union-attr]
+
+    # Convert back to list[dict] for downstream compatibility
+    return [e.model_dump() for e in events]
 
 
 def _extract_pattern_based(text: str, chunk_index: int) -> list[dict[str, Any]]:

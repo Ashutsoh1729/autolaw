@@ -1,6 +1,6 @@
 # Phase 1 — Extractor Refactor: Pydantic AI + OpenRouter
 
-**Status:** Pending
+**Status:** Done
 **Depends on:** Nothing (self-contained backend refactor)
 
 ---
