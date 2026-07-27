@@ -7,9 +7,10 @@ from pathlib import Path
 import aiofiles
 
 from app.config import settings
+from app.storage.base import StorageProvider
 
 
-class LocalStorageProvider:
+class LocalStorageProvider(StorageProvider):
     """Store and retrieve files on the local filesystem."""
 
     def __init__(self, base_path: str | None = None) -> None:
@@ -25,7 +26,7 @@ class LocalStorageProvider:
     async def save(self, matter_id: str, filename: str, content: bytes) -> str:
         """Save a file and return its relative storage path."""
         matter_dir = self._matter_dir(matter_id)
-        # Avoid filename collisions by prefixing with timestamp
+        # Avoid filename collisions by prefixing with hash
         safe_name = f"{hash(content)}_{filename}"
         file_path = matter_dir / safe_name
         async with aiofiles.open(file_path, "wb") as f:
@@ -54,7 +55,7 @@ class LocalStorageProvider:
         if matter_dir.exists():
             shutil.rmtree(matter_dir)
 
-    def get_matter_usage_bytes(self, matter_id: str) -> int:
+    async def get_matter_usage_bytes(self, matter_id: str) -> int:
         """Calculate total bytes of stored files for a matter."""
         matter_dir = self.base_path / "matters" / matter_id
         if not matter_dir.exists():

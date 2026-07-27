@@ -10,7 +10,7 @@ from app.config import settings
 from app.models.document import Document
 from app.models.matter import Matter
 from app.schemas.document import DocumentResponse
-from app.storage.local import storage_provider
+from app.storage import storage_provider
 
 
 def _infer_original_type(filename: str) -> str:
@@ -64,7 +64,7 @@ async def upload_document(
         raise ValueError(f"Matter {matter_id} not found")
 
     # Check per-matter total limit
-    current_usage = storage_provider.get_matter_usage_bytes(matter_id)
+    current_usage = await storage_provider.get_matter_usage_bytes(matter_id)
     max_total = settings.max_matter_total_mb * 1024 * 1024
     if current_usage + file_size > max_total:
         raise ValueError(

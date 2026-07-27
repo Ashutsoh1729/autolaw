@@ -28,3 +28,5 @@ Thumbs.db
 # AutoLaw specific
 backend/uploads/
 backend/*.db
+# Python package build artifacts
+*.egg-info/

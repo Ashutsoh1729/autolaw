@@ -14,7 +14,7 @@ from app.services.chunker import chunk_document
 from app.services.classifier import classify_document
 from app.services.extractor import extract_events_from_chunk
 from app.services.dedup import process_events
-from app.storage.local import storage_provider
+from app.storage import storage_provider
 
 logger = logging.getLogger(__name__)
 
