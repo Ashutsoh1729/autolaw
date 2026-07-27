@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
+import { apiFetch, getApiBase } from "@/lib/api"
 
 export interface Matter {
   id: string
@@ -45,20 +46,6 @@ export interface TimelineEvent {
   source_filename?: string
 }
 
-const API_BASE = "/api"
-
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    ...options,
-  })
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(err.detail || `Request failed: ${res.status}`)
-  }
-  return res.json()
-}
-
 export function useMatters(search?: string, status?: string) {
   const [matters, setMatters] = useState<Matter[]>([])
   const [total, setTotal] = useState(0)
@@ -73,7 +60,7 @@ export function useMatters(search?: string, status?: string) {
       if (search) params.set("search", search)
       if (status) params.set("status", status)
       const data = await apiFetch<{ matters: Matter[]; total: number }>(
-        `/matters?${params.toString()}`
+        `/api/matters?${params.toString()}`
       )
       setMatters(data.matters)
       setTotal(data.total)
@@ -99,7 +86,7 @@ export function useMatter(matterId: string | undefined) {
   useEffect(() => {
     if (!matterId) return
     setLoading(true)
-    apiFetch<Matter>(`/matters/${matterId}`)
+    apiFetch<Matter>(`/api/matters/${matterId}`)
       .then(setMatter)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
@@ -119,7 +106,7 @@ export function useDocuments(matterId: string | undefined) {
     setLoading(true)
     try {
       const data = await apiFetch<{ documents: Document[]; total: number }>(
-        `/matters/${matterId}/documents`
+        `/api/matters/${matterId}/documents`
       )
       setDocuments(data.documents)
       setTotal(data.total)
@@ -156,7 +143,7 @@ export function useTimeline(
     if (filters?.search) params.set("search", filters.search)
 
     apiFetch<{ events: TimelineEvent[]; total_events: number }>(
-      `/matters/${matterId}/timeline?${params.toString()}`
+      `/api/matters/${matterId}/timeline?${params.toString()}`
     )
       .then((data) => {
         setEvents(data.events)
@@ -176,7 +163,7 @@ export async function createMatter(data: {
   jurisdiction?: string
   description?: string
 }): Promise<Matter> {
-  return apiFetch<Matter>("/matters", {
+  return apiFetch<Matter>("/api/matters", {
     method: "POST",
     body: JSON.stringify(data),
   })
@@ -184,13 +171,13 @@ export async function createMatter(data: {
 
 export async function processDocument(matterId: string, docId: string) {
   return apiFetch<{ status: string; message: string }>(
-    `/matters/${matterId}/documents/${docId}/process`,
+    `/api/matters/${matterId}/documents/${docId}/process`,
     { method: "POST" }
   )
 }
 
 export async function exportTimeline(matterId: string, format: "docx" | "pdf") {
-  const res = await fetch(`${API_BASE}/matters/${matterId}/export?format=${format}`)
+  const res = await fetch(`${getApiBase()}/api/matters/${matterId}/export?format=${format}`)
   if (!res.ok) throw new Error("Export failed")
   const blob = await res.blob()
   const url = URL.createObjectURL(blob)
