@@ -24,3 +24,7 @@ Thumbs.db
 .vscode/
 *.sublime-project
 *.sublime-workspace
+
+# AutoLaw specific
+backend/uploads/
+backend/*.db
