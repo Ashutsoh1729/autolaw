@@ -14,9 +14,17 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./uploads/autolaw.db"
 
     # File storage
+    storage_provider: str = "local"
     upload_dir: str = str(Path(__file__).resolve().parent.parent / "uploads")
     max_file_size_mb: int = 50
     max_matter_total_mb: int = 500
+
+    # S3-compatible storage (used when storage_provider = "s3")
+    s3_endpoint_url: str = ""
+    s3_region: str = ""
+    s3_access_key_id: str = ""
+    s3_secret_access_key: str = ""
+    s3_bucket_name: str = ""
 
     # OCR
     tesseract_cmd: str = "/opt/homebrew/bin/tesseract"

@@ -13,7 +13,7 @@ from app.services.matter import (
     delete_matter,
     get_matter_response,
 )
-from app.storage.local import storage_provider
+from app.storage import storage_provider
 
 router = APIRouter(prefix="/api/matters", tags=["Matters"])
 
