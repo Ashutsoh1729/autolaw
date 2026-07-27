@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import aioboto3
+from botocore.exceptions import ClientError
 
 from app.storage.base import StorageProvider
 
@@ -81,14 +82,19 @@ class S3StorageProvider(StorageProvider):
         ) as s3:
             paginator = s3.get_paginator("list_objects_v2")
             pages = paginator.paginate(Bucket=self.bucket_name, Prefix=prefix)
-            async for page in pages:
-                objects = page.get("Contents", [])
-                if objects:
-                    delete_keys = [{"Key": obj["Key"]} for obj in objects]
-                    await s3.delete_objects(
-                        Bucket=self.bucket_name,
-                        Delete={"Objects": delete_keys},
-                    )
+            try:
+                async for page in pages:
+                    objects = page.get("Contents", [])
+                    if objects:
+                        delete_keys = [{"Key": obj["Key"]} for obj in objects]
+                        await s3.delete_objects(
+                            Bucket=self.bucket_name,
+                            Delete={"Objects": delete_keys},
+                        )
+            except ClientError as exc:
+                if exc.response["Error"]["Code"] == "NoSuchKey":
+                    return
+                raise
 
     async def get_matter_usage_bytes(self, matter_id: str) -> int:
         """Sum the sizes of all objects under the matter's key prefix."""
@@ -100,7 +106,12 @@ class S3StorageProvider(StorageProvider):
         ) as s3:
             paginator = s3.get_paginator("list_objects_v2")
             pages = paginator.paginate(Bucket=self.bucket_name, Prefix=prefix)
-            async for page in pages:
-                for obj in page.get("Contents", []):
-                    total += obj["Size"]
+            try:
+                async for page in pages:
+                    for obj in page.get("Contents", []):
+                        total += obj["Size"]
+            except ClientError as exc:
+                if exc.response["Error"]["Code"] == "NoSuchKey":
+                    return 0
+                raise
         return total
