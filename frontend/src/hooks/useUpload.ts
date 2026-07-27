@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react"
+import { getApiBase } from "@/lib/api"
 
 interface UploadProgress {
   fileName: string
@@ -68,7 +69,7 @@ export function useUpload(): UseUploadReturn {
               reject(new Error(msg))
             })
 
-            xhr.open("POST", `/api/matters/${matterId}/documents`)
+            xhr.open("POST", `${getApiBase()}/api/matters/${matterId}/documents`)
             xhr.send(formData)
           })
         } catch (err) {
