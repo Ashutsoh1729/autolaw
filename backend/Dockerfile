@@ -23,5 +23,5 @@ COPY . .
 
 EXPOSE 8000
 
-# Run Uvicorn directly (no reload in production)
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run main.py (reads PORT from env var with fallback to 8000)
+CMD uv run python main.py
