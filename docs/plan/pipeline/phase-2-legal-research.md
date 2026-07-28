@@ -26,9 +26,33 @@ Phase-1 output (matter context + timeline events)
   → [Export] — include brief in the final Word/PDF export
 ```
 
+## Sub-Plans
+
+Phase 2 is broken into four parallel-safe sub-plans. Each sub-plan is self-contained, follows the plan-creator format, and can be implemented independently.
+
+| Group | Plan File | Focus | Parallel-Safe With |
+|-------|-----------|-------|-------------------|
+| **A** | [`phase-2/phase-2-corpus-ingestion.md`](phase-2/phase-2-corpus-ingestion.md) | Corpus parsing, chunking, embedding, vector store setup | All new backend files + docker-compose.yml. Defines `VectorStore` interface contract consumed by Group B. |
+| **B** | [`phase-2/phase-2-search-and-brief.md`](phase-2/phase-2-search-and-brief.md) | Query formulation, vector search, reranking, LLM brief synthesis, research API router | All new backend files. Imports `VectorStore` from Group A (read-only). Defines API contract consumed by Group C. |
+| **C** | [`phase-2/phase-2-research-ui.md`](phase-2/phase-2-research-ui.md) | Research tab on MatterDetail, search input with filters, brief display, citation components | Frontend-only. Modifies `MatterDetail.tsx` and `App.tsx`. Consumes Group B's API contract. |
+| **D** | [`phase-2/phase-2-integration-export.md`](phase-2/phase-2-integration-export.md) | Wire research into export, link events to precedents, end-to-end test | Runs AFTER Groups A–C merge. Modifies existing backend files (`export.py`, `timeline.py`) and `TimelineView.tsx`. |
+
+### Parallelization Dependencies
+
+```
+Group A ──defines VectorStore──▶ Group B ──defines API endpoints──▶ Group C
+                                                                    │
+Groups A + B + C ────all merged────▶ Group D (integration + export + E2E test)
+```
+
+- Groups A, B, and C can be implemented in parallel.
+- Group D must wait for A, B, and C to merge first since it imports services from all three groups and runs end-to-end tests.
+
 ## Implementation Steps
 
 ### Step 1: Corpus Ingestion Pipeline
+*See [phase-2/phase-2-corpus-ingestion.md](phase-2/phase-2-corpus-ingestion.md) for full implementation plan.*
+
 - [ ] Identify and acquire case law corpus (e.g., CourtListener / Caselaw Access Project / custom dataset).
 - [ ] Build ingestion script: parse legal documents into text chunks with citation metadata.
 - [ ] Set up embedding service (OpenAI embeddings / sentence-transformers / local model).
@@ -37,6 +61,8 @@ Phase-1 output (matter context + timeline events)
 - [ ] Write ingestion tests verifying correct chunking and embedding dimensions.
 
 ### Step 2: Query Pipeline
+*See [phase-2/phase-2-search-and-brief.md](phase-2/phase-2-search-and-brief.md) for full implementation plan.*
+
 - [ ] Build query formulation service: convert matter facts/timeline events into structured legal queries.
 - [ ] Implement vector search endpoint: `POST /api/matters/{id}/research/search?q=...`.
 - [ ] Implement reranking step (cross-encoder or LLM-based) to improve top-k results.
@@ -44,6 +70,8 @@ Phase-1 output (matter context + timeline events)
 - [ ] Write tests for search relevance with known queries.
 
 ### Step 3: Research Brief Generation
+*See [phase-2/phase-2-search-and-brief.md](phase-2/phase-2-search-and-brief.md) for full implementation plan.*
+
 - [ ] Design the research brief output schema (sections: summary, relevant precedents, statutes, analysis).
 - [ ] Build LLM synthesis prompt that takes retrieved passages + matter context and generates a structured brief.
 - [ ] Implement citation tracking: each claim in the brief must reference its source passage.
@@ -51,6 +79,8 @@ Phase-1 output (matter context + timeline events)
 - [ ] Handle the case where no relevant results are found (graceful degradation).
 
 ### Step 4: Research UI
+*See [phase-2/phase-2-research-ui.md](phase-2/phase-2-research-ui.md) for full implementation plan.*
+
 - [ ] Add research tab/section to the matter detail page.
 - [ ] Implement search input with autocomplete and filter controls.
 - [ ] Display research brief with expandable citations and source links.
@@ -59,6 +89,8 @@ Phase-1 output (matter context + timeline events)
 - [ ] Component tests for the research UI.
 
 ### Step 5: Integration with Phase 1
+*See [phase-2/phase-2-integration-export.md](phase-2/phase-2-integration-export.md) for full implementation plan.*
+
 - [ ] Wire research brief into the export pipeline (include in Word/PDF export).
 - [ ] Add research context to timeline events (link events to relevant precedents).
 - [ ] End-to-end test: matter with documents → timeline → research query → export with brief.
