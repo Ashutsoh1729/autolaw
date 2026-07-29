@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # Email ingestion (placeholder for Phase 2)
     email_domain: str = "matter.autolaw.app"
 
-    model_config = {"env_prefix": "AUTOLAW_", "env_file": ".env"}
+    model_config = {"env_prefix": "AUTOLAW_", "env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()

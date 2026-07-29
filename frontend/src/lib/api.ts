@@ -1,9 +1,19 @@
 /**
  * Thin API client wrapper.
  *
- * Reads VITE_API_URL from the environment (set via .env or Vercel dashboard).
- * When not set, defaults to empty string so all requests use relative URLs
- * (handled by the Vite dev proxy or same-origin production deployment).
+ * API_BASE resolution (in priority order):
+ * 1. VITE_API_URL environment variable — set at build time (e.g. Render URL)
+ * 2. Empty string — all requests use relative URLs (monorepo mode on Vercel,
+ *    or Vite dev proxy in local development)
+ *
+ * Monorepo deployment (Vercel):
+ *   Both frontend and backend are served from the same domain (myapp.vercel.app).
+ *   API calls to `/api/...` are same-origin, so API_BASE stays empty.
+ *   No CORS needed in monorepo mode.
+ *
+ * Separate deployment (Render):
+ *   VITE_API_URL is set to the Render backend URL (e.g. https://autolaw-api.onrender.com).
+ *   API calls go cross-origin and CORS is handled by the backend.
  */
 
 const API_BASE: string = import.meta.env.VITE_API_URL ?? ""
