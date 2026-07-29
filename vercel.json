@@ -5,7 +5,8 @@
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist"
+        "distDir": "dist",
+        "routePrefix": "/"
       }
     },
     {
@@ -14,7 +15,7 @@
     }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "backend/asgi.py" },
+    { "src": "/api/(.*)", "dest": "/backend/asgi.py" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
