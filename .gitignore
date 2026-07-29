@@ -30,4 +30,3 @@ backend/uploads/
 backend/*.db
 # Python package build artifacts
 *.egg-info/
-.vercel
