@@ -8,16 +8,21 @@ import {
   Clock,
   Loader2,
   Eye,
+  BookOpen,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { DropZone, type FileEntry } from "@/components/DropZone"
 import { ProcessingBadge } from "@/components/ProcessingBadge"
 import { UploadProgressBar, MatterProgressBar } from "@/components/ProgressBar"
 import { EmailForwardingSetup } from "@/components/EmailForwardingSetup"
+import { ResearchSearch } from "@/components/ResearchSearch"
+import { ResearchBrief } from "@/components/ResearchBrief"
 import { useUpload } from "@/hooks/useUpload"
 import { useMatter, useDocuments, processDocument } from "@/hooks/useMatter"
+import { useResearchBrief } from "@/hooks/useResearch"
 
 const DOC_TYPE_LABELS: Record<string, string> = {
   contract: "Contract",
@@ -40,6 +45,16 @@ export function MatterDetail() {
   const [uploading, setUploading] = useState(false)
   const [processingDocId, setProcessingDocId] = useState<string | null>(null)
   const [processMessage, setProcessMessage] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<"documents" | "research">("documents")
+
+  const {
+    brief,
+    status: briefStatus,
+    loading: briefLoading,
+    error: briefError,
+    generateBrief,
+    regenerateBrief,
+  } = useResearchBrief(id)
 
   const handleFilesSelected = useCallback((newFiles: FileEntry[]) => {
     setFiles((prev) => [...prev, ...newFiles])
@@ -84,6 +99,20 @@ export function MatterDetail() {
     [id, refetchDocs]
   )
 
+  const handleGenerateBrief = useCallback(
+    (query: string) => {
+      void generateBrief(query)
+    },
+    [generateBrief]
+  )
+
+  const handleRegenerate = useCallback(
+    (query?: string) => {
+      void regenerateBrief(query)
+    },
+    [regenerateBrief]
+  )
+
   if (matterLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -92,7 +121,7 @@ export function MatterDetail() {
     )
   }
 
-  if (matterError || !matter) {
+  if (matterError || !matter || !id) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <Button
@@ -115,6 +144,10 @@ export function MatterDetail() {
   const processedCount = documents.filter(
     (d) => d.processing_status === "extracted" || d.processing_status === "failed"
   ).length
+
+  const hasExtractedDocs = documents.some(
+    (d) => d.processing_status === "extracted"
+  )
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -169,8 +202,34 @@ export function MatterDetail() {
         </div>
       )}
 
-      {/* Documents Section */}
-      <div className="mb-8">
+      {/* Tabs: Documents + Research */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as "documents" | "research")}
+        className="mb-8"
+      >
+        <TabsList>
+          <TabsTrigger value="documents">
+            <FileText className="h-4 w-4" />
+            Documents
+          </TabsTrigger>
+          <TabsTrigger
+            value="research"
+            disabled={!hasExtractedDocs}
+            title={
+              !hasExtractedDocs
+                ? "Process documents first to enable legal research."
+                : undefined
+            }
+          >
+            <BookOpen className="h-4 w-4" />
+            Research
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="documents" forceMount>
+          {/* Documents Section */}
+          <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">
             Documents ({total})
@@ -321,7 +380,34 @@ export function MatterDetail() {
             ))}
           </div>
         )}
-      </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="research" forceMount>
+          {hasExtractedDocs ? (
+            <div className="space-y-6" data-testid="research-tab-content">
+              <ResearchSearch
+                matterId={id}
+                onGenerateBrief={handleGenerateBrief}
+              />
+              <ResearchBrief
+                matterId={id}
+                brief={brief}
+                status={briefStatus}
+                loading={briefLoading}
+                error={briefError}
+                onRegenerate={handleRegenerate}
+              />
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                Process documents first to enable legal research.
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Email Forwarding */}
       {matter.email_address && (
