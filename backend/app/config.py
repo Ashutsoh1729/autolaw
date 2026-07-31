@@ -38,6 +38,18 @@ class Settings(BaseSettings):
     llm_model: str = "openai/gpt-4o-mini"
     llm_base_url: str = "https://openrouter.ai/api/v1"
 
+    # Vector store (Phase 2 — RAG corpus ingestion)
+    # "qdrant" for now; extensible to pgvector / ChromaDB later.
+    vector_store_provider: str = "qdrant"
+    qdrant_url: str = "http://localhost:6333"
+
+    # Embeddings via OpenRouter (Phase 2 — corpus ingestion)
+    # Same OpenRouter key powers embeddings; dimension must match the model.
+    embedding_model: str = "nvidia/nemotron-3-embed-1b:free"
+    embedding_fallback_model: str = "qwen/qwen3-embedding-8b"
+    embedding_dimension: int = 1024
+    embedding_base_url: str = "https://openrouter.ai/api/v1"
+
     # Email ingestion (placeholder for Phase 2)
     email_domain: str = "matter.autolaw.app"
 
