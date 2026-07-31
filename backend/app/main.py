@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import init_db
-from app.routers import matters, documents, timeline, export
+from app.routers import corpus, matters, documents, timeline, export
 
 # Configure logging
 logging.basicConfig(
@@ -49,6 +49,7 @@ app.include_router(matters.router)
 app.include_router(documents.router)
 app.include_router(timeline.router)
 app.include_router(export.router)
+app.include_router(corpus.router)
 
 
 @app.get("/api/health", tags=["Health"])

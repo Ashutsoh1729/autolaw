@@ -40,14 +40,17 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
-  # Placeholder for OCR service / vector store in Phase 2
-  # qdrant:
-  #   image: qdrant/qdrant:latest
-  #   ports:
-  #     - "6333:6333"
-  #   volumes:
-  #     - qdrant_data:/qdrant/storage
+  # Vector store for the Phase 2 RAG pipeline (corpus ingestion + search)
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
 
 volumes:
   uploads:
   pgdata:
+  qdrant_data:

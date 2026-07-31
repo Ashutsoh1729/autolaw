@@ -29,6 +29,7 @@ async def init_db() -> None:
     from app.models.matter import Matter  # noqa: F401
     from app.models.document import Document  # noqa: F401
     from app.models.event import Event  # noqa: F401
+    from app.models.corpus_document import CorpusDocument  # noqa: F401
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
